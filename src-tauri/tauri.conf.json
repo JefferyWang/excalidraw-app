@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "identifier": "com.excalidraw.app",
   "build": {
-    "beforeDevCommand": "yarn dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "yarn build",
-    "frontendDist": "../dist"
+    "beforeDevCommand": "cd ../src && export NODE_ENV=development && yarn start",
+    "devUrl": "http://localhost:3000",
+    "beforeBuildCommand": "cd ../src && rm -rf excalidraw-app/build && export NODE_ENV=development && yarn && export NODE_ENV=production && yarn build",
+    "frontendDist": "../src/excalidraw-app/build"
   },
   "app": {
     "windows": [
