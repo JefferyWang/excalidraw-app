@@ -27,6 +27,9 @@ import { fileSave } from "./filesystem";
 import { serializeAsJSON } from "./json";
 import { getElementsOverlappingFrame } from "../frame";
 
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile, writeFile } from '@tauri-apps/plugin-fs';
+
 export { loadFromBlob } from "./blob";
 export { loadFromJSON, saveAsJSON } from "./json";
 
@@ -122,17 +125,38 @@ export const exportCanvas = async (
     );
 
     if (type === "svg") {
-      return fileSave(
-        svgPromise.then((svg) => {
-          return new Blob([svg.outerHTML], { type: MIME_TYPES.svg });
-        }),
-        {
-          description: "Export to SVG",
-          name,
-          extension: appState.exportEmbedScene ? "excalidraw.svg" : "svg",
-          fileHandle,
-        },
-      );
+      if ('__TAURI__' in window) {
+        // 选择保存的路径
+        const path = await save({
+          defaultPath: name,
+          filters: [
+            {
+              name: name,
+              extensions: ['svg']
+            },
+          ],
+        });
+        if (path) {
+          // 保存文件
+          const text = await svgPromise.then((svg) => {
+            return svg.outerHTML;
+          });
+          await writeTextFile(path, text);
+        }
+        return null;
+      } else {
+        return fileSave(
+          svgPromise.then((svg) => {
+            return new Blob([svg.outerHTML], { type: MIME_TYPES.svg });
+          }),
+          {
+            description: "Export to SVG",
+            name,
+            extension: appState.exportEmbedScene ? "excalidraw.svg" : "svg",
+            fileHandle,
+          },
+        );
+      }
     } else if (type === "clipboard-svg") {
       const svg = await svgPromise.then((svg) => svg.outerHTML);
       try {
@@ -165,14 +189,33 @@ export const exportCanvas = async (
       );
     }
 
-    return fileSave(blob, {
-      description: "Export to PNG",
-      name,
-      // FIXME reintroduce `excalidraw.png` when most people upgrade away
-      // from 111.0.5563.64 (arm64), see #6349
-      extension: /* appState.exportEmbedScene ? "excalidraw.png" : */ "png",
-      fileHandle,
-    });
+    if ('__TAURI__' in window) {
+      // 选择保存的路径
+      const path = await save({
+        defaultPath: name,
+        filters: [
+          {
+            name: name,
+            extensions: ['png']
+          },
+        ],
+      });
+      if (path) {
+        const data = await blob;
+        const contents = new Uint8Array(await data.arrayBuffer());
+        await writeFile(path, contents);
+      }
+      return null;
+    } else {
+      return fileSave(blob, {
+        description: "Export to PNG",
+        name,
+        // FIXME reintroduce `excalidraw.png` when most people upgrade away
+        // from 111.0.5563.64 (arm64), see #6349
+        extension: /* appState.exportEmbedScene ? "excalidraw.png" : */ "png",
+        fileHandle,
+      });
+    }
   } else if (type === "clipboard") {
     try {
       const blob = canvasToBlob(tempCanvas);

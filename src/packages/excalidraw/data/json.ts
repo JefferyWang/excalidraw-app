@@ -19,6 +19,9 @@ import type {
   ImportedLibraryData,
 } from "./types";
 
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
+
 /**
  * Strips out files which are only referenced by deleted elements
  */
@@ -80,15 +83,35 @@ export const saveAsJSON = async (
     type: MIME_TYPES.excalidraw,
   });
 
-  const fileHandle = await fileSave(blob, {
-    name,
-    extension: "excalidraw",
-    description: "Excalidraw file",
-    fileHandle: isImageFileHandle(appState.fileHandle)
-      ? null
-      : appState.fileHandle,
-  });
-  return { fileHandle };
+  const is_tauri = '__TAURI__' in window;
+
+  if (!is_tauri) {
+    const fileHandle = await fileSave(blob, {
+      name,
+      extension: "excalidraw",
+      description: "Excalidraw file",
+      fileHandle: isImageFileHandle(appState.fileHandle)
+        ? null
+        : appState.fileHandle,
+    });
+    return { fileHandle };
+  } else {
+    // 选择保存的路径
+    const path = await save({
+      defaultPath: name,
+      filters: [
+        {
+          name: name,
+          extensions: ['excalidraw']
+        },
+      ],
+    });
+    if (path) {
+      // 保存文件
+      await writeTextFile(path, serialized);
+    }
+    return { fileHandle: null };
+  }
 };
 
 export const loadFromJSON = async (

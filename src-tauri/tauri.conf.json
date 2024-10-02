@@ -9,6 +9,7 @@
     "frontendDist": "../src/excalidraw-app/build"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "excalidraw-app",
